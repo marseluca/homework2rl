@@ -25,6 +25,11 @@ public:
                            double _Kpo,
                            double _Kdp,
                            double _Kdo);
+    Eigen::VectorXd idCntr(KDL::Frame &_desPos,
+                           KDL::Twist &_desVel,
+                           KDL::Twist &_desAcc,
+                           double _Kpp,
+                           double _Kdp);                       
 
 private:
 

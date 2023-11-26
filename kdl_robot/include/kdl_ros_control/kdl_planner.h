@@ -47,17 +47,20 @@ public:
     // CIRCULAR TRAJECTORY CONSTRUCTOR
     KDLPlanner(double _trajDuration, Eigen::Vector3d _trajInit, double _trajRadius);
     // 
-   
+   // GENERAL CONSTRUCTOR
+    KDLPlanner(double _trajDuration, double _accDuration,
+               Eigen::Vector3d _trajInit, Eigen::Vector3d _trajEnd, double _trajRadius);
+
     // CURVILINEAR ABSCISSA
     void trapezoidal_vel(double time, double &s, double &dots,double &ddots);
     void cubic_polinomial(double time, double &s, double &dots,double &ddots); 
 
     // PLANNERS
-    trajectory_point compute_trajectory(double time); 
-    trajectory_point compute_trapezoidal( double t); 
-    trajectory_point compute_cubic( double t);
+    trajectory_point compute_trajectory(double time, std::string profile, std::string path); 
+    trajectory_point compute_trapezoidal_linear( double t); 
+    trajectory_point compute_cubic_linear( double t);
     trajectory_point compute_cubic_circular( double t);
-   
+    trajectory_point compute_trapezoidal_circular( double t); 
     // PATH PRIMITIVES
     trajectory_point path_primitive_linear( double &s, double &dots,double &ddots); 
     trajectory_point path_primitive_circular( double &s, double &dots,double &ddots);

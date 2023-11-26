@@ -5,12 +5,13 @@ KDLController::KDLController(KDLRobot &_robot)
     robot_ = &_robot;
 }
 
+//IMPLEMENTAZIONE PROF
 Eigen::VectorXd KDLController::idCntr(KDL::JntArray &_qd,
                                       KDL::JntArray &_dqd,
                                       KDL::JntArray &_ddqd,
                                       double _Kp, double _Kd)
 {
-    // read current state
+    // read current joint state
     Eigen::VectorXd q = robot_->getJntValues();
     Eigen::VectorXd dq = robot_->getJntVelocities();
 
@@ -23,45 +24,34 @@ Eigen::VectorXd KDLController::idCntr(KDL::JntArray &_qd,
             + robot_->getCoriolis() + robot_->getGravity() /*friction compensation?*/;
 }
 
+
+//IMPLEMENTAZIONE NOSTRA
 Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
                                       KDL::Twist &_desVel,
                                       KDL::Twist &_desAcc,
                                       double _Kpp, double _Kpo,
                                       double _Kdp, double _Kdo)
 {
+   
    // calculate gain matrices
    Eigen::Matrix<double,6,6> Kp, Kd;
+   Kp=Eigen::MatrixXd::Zero(6,6);
+   Kd=Eigen::MatrixXd::Zero(6,6);
    Kp.block(0,0,3,3) = _Kpp*Eigen::Matrix3d::Identity(); //costruisco la matrice 3x3 dei guadagni sull'errore di posizione
    Kp.block(3,3,3,3) = _Kpo*Eigen::Matrix3d::Identity(); //costruisco la matrice 3x3 dei guadagni sull'errore di orientamento
    Kd.block(0,0,3,3) = _Kdp*Eigen::Matrix3d::Identity();//costruisco la matrice 3x3 dei guadagni sulla derivata dell'errore di posizione
    Kd.block(3,3,3,3) = _Kdo*Eigen::Matrix3d::Identity();//costruisco la matrice 3x3 dei guadagni sulla derivata dell'errore di orientamento
 
 
-   // read current state
-
-   // CONVERT GEOMETRICAL JACOBIAN FROM KDL::JACOBIAN TO EIGEN::MATRIX
-   int rows = 6;
-   int cols = 7;
-
-   Eigen::MatrixXd J(rows, cols);
-
-    for (unsigned int i = 0; i < rows; ++i) {
-        for (unsigned int j = 0; j < cols; ++j) {
-            J(i, j) = robot_->getEEJacobian()(i, j);
-        }
-    }
 
 
-   // Eigen::Matrix<double,6,7> J = robot_->getJacobian();
-   //J= KDL::Jacobian(7)
-   //J= robot_->getEEJacobian();
-   //dobbiamo ricavare la matrice di mapping T(phi_e) e trovare il jacobiano analitico come
-   //Ja=Ta^(-1)*J dove Ta=[ I 0; 0 T(phi_e)]
-   
+    //CONVERSIONE DA JACOBIAN A MATRIX SI PUO' FARE SEMPLICEMENTE COSI
+    Eigen::Matrix<double,6,7> J = robot_->getEEJacobian().data;
+
    Eigen::Matrix<double,7,7> I = Eigen::Matrix<double,7,7>::Identity();
    Eigen::Matrix<double,7,7> M = robot_->getJsim();
    //Eigen::Matrix<double,7,6> Jpinv = weightedPseudoInverse(M,J);
-   //Eigen::Matrix<double,7,6> Jpinv = pseudoinverse(J);
+   Eigen::Matrix<double,7,6> Jpinv = pseudoinverse(J);
 
    // position
    Eigen::Vector3d p_d(_desPos.p.data);
@@ -70,9 +60,7 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
    Eigen::Matrix<double,3,3,Eigen::RowMajor> R_e(robot_->getEEFrame().M.data);
    R_d = matrixOrthonormalization(R_d);
    R_e = matrixOrthonormalization(R_e);
-   Eigen::Matrix<double,3,1> euler= computeEulerAngles(R_e);
-   Eigen::Matrix<double,6,7> JA=AnalitycalJacobian(J,euler);
-   Eigen::Matrix<double,7,6> JApinv = pseudoinverse(JA);
+
    // velocity
    Eigen::Vector3d dot_p_d(_desVel.vel.data);
    Eigen::Vector3d dot_p_e(robot_->getEEVelocity().vel.data);
@@ -99,16 +87,19 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
 //    Eigen::Matrix<double,3,1> dot_e_o = computeOrientationVelocityError(omega_d,
 //                                                                        omega_e,
 //                                                                        R_d,
- //                                                                       R_e);      
-   Eigen::Matrix<double,3,1> e_o = computeOrientationErrorEuler(R_d,R_e);
-   Eigen::Matrix<double,3,1> dot_e_o = computeOrientationVelocityErrorEuler(omega_d,
+ //                                                                       R_e);   
+    
+   Eigen::Matrix<double,3,1> e_o = computeOrientationError(R_d,R_e);
+   Eigen::Matrix<double,3,1> dot_e_o = computeOrientationVelocityError(omega_d,
                                                                        omega_e,
                                                                        R_d,
                                                                        R_e);
+
+   //ERRORE                                                                    
    Eigen::Matrix<double,6,1> x_tilde;
    Eigen::Matrix<double,6,1> dot_x_tilde;
    x_tilde << e_p, e_o;
-   dot_x_tilde << dot_e_p, dot_e_o;//dot_e_o; -omega_e
+   dot_x_tilde << dot_e_p, -omega_e;//dot_e_o;
    dot_dot_x_d << dot_dot_p_d, dot_dot_r_d;
 
    // null space control
@@ -137,21 +128,75 @@ Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
 //    std::cout << "Jnt lmt gradient: " << std::endl << grad.transpose() << std::endl;
 //    std::cout << "---------------------" << std::endl;
 
-   // CONVERT GEOMETRICAL JACOBIAN FROM KDL::JACOBIAN TO EIGEN::MATRIX
-    Eigen::MatrixXd J_dot(rows, cols);
-
-    // Copy data from KDL Jacobian to Eigen matrix
-    for (unsigned int i = 0; i < rows; ++i) {
-        for (unsigned int j = 0; j < cols; ++j) {
-            J_dot(i, j) = robot_->getEEJacDot()(i, j);
-        }
-    }
-
    // inverse dynamics
-   Eigen::Matrix<double,6,1> y;
-   y << dot_dot_x_d - AnalyticalJacobianDot(J,J_dot,euler,omega_e)*robot_->getJntVelocities() + Kd*dot_x_tilde + Kp*x_tilde;
 
-   return M * (JApinv*y + (I-JApinv*JA)*(/*- 10*grad */- 1*robot_->getJntVelocities()))
-           + robot_->getGravity() + robot_->getCoriolis();
+   //stampiamo le velocita q_dot
+   //std::cout<<robot_->getJntVelocities()<<std::endl;
+
+    //ci salviamo i valori di J_dot in una matrice per facilitare il prodotto
+    
+    // std::cout<<Jdot<<std::endl;
+    // std::cout<<"debug5"<<std::endl;
+
+    //creiamo una matrice contenente y = xd_dot_dot - J_dot*q_dot + Kd*x_tilde_dot + Kp*x_tilde
+    Eigen::Matrix<double,6,1> y;
+    y << dot_dot_x_d - robot_->getEEJacDotqDot() + Kd*dot_x_tilde + Kp*x_tilde;
+
+    //restituiamo l'ingresso di controllo u = By + n
+       return M * (Jpinv*y)+ robot_->getGravity() + robot_->getCoriolis();
+           //(I-Jpinv*J)*(/*- 10*grad */- 1*robot_->getJntVelocities())
+
+    
 }
+
+
+Eigen::VectorXd KDLController::idCntr(KDL::Frame &_desPos,
+                                      KDL::Twist &_desVel,
+                                      KDL::Twist &_desAcc,
+                                      double _Kpp,
+                                      double _Kdp)
+{
+   
+   // calculate gain matrices
+   Eigen::Matrix<double,3,3> Kp, Kd;
+   Kp = _Kpp*Eigen::Matrix3d::Identity(); //costruisco la matrice 3x3 dei guadagni sull'errore di posizione
+   Kd = _Kdp*Eigen::Matrix3d::Identity();//costruisco la matrice 3x3 dei guadagni sulla derivata dell'errore di posizione
+   
+
+   Eigen::Matrix<double,6,7> J = robot_->getEEJacobian().data;
+   Eigen::Matrix<double,3,7> J_red = J.topRows(3);
+   Eigen::Matrix<double,7,7> M = robot_->getJsim();
+   Eigen::Matrix<double,7,3> Jpinv = pseudoinverse(J_red);
+
+   // position
+   Eigen::Vector3d p_d(_desPos.p.data);
+   Eigen::Vector3d p_e(robot_->getEEFrame().p.data);
+
+   // velocity
+   Eigen::Vector3d dot_p_d(_desVel.vel.data);
+   Eigen::Vector3d dot_p_e(robot_->getEEVelocity().vel.data);
+
+
+   // acceleration
+   Eigen::Matrix<double,3,1> dot_dot_x_d;
+   Eigen::Matrix<double,3,1> dot_dot_p_d(_desAcc.vel.data);
+
+   // compute linear errors
+   Eigen::Matrix<double,3,1> e_p = computeLinearError(p_d,p_e);
+   Eigen::Matrix<double,3,1> dot_e_p = computeLinearError(dot_p_d,dot_p_e);
+   //ERRORE                                                                    
+   Eigen::Matrix<double,3,1> x_tilde;
+   Eigen::Matrix<double,3,1> dot_x_tilde;
+   x_tilde << e_p;
+   dot_x_tilde << dot_e_p;
+   dot_dot_x_d << dot_dot_p_d;
+
+Eigen::Matrix<double,3,1> y;
+
+    y << dot_dot_x_d - robot_->getEEJacDotqDot_red() + Kd*dot_x_tilde + Kp*x_tilde;
+return M * (Jpinv*y)+ robot_->getGravity() + robot_->getCoriolis();
+
+           
+}
+
 

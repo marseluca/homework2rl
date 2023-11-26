@@ -230,84 +230,27 @@ return e_phi;
 
 
 inline Eigen::Matrix<double,3,3> T_matrix(const Eigen::Matrix<double,3,1> &euler){
-    double phi=euler(0,0);
-    double theta=euler(1,0);
-    Eigen::Matrix<double,3,3> T;/*{
-        {0, -sin(phi),cos(phi)*sin(theta)},
-        {0, cos(phi),sin(phi)*sin(theta)},
-        {1,0, cos(theta)}
-    };*/
-    T(0,0) = 0;
-    T(0,1) = -sin(phi);
-    T(0,2) = cos(phi)*sin(theta);
-    T(1,0) = 0;
-    T(1,1) = cos(phi);
-    T(1,2) = sin(phi)*sin(theta);
-    T(2,0)= 1;
-    T(2,1)= 0;
-    T(2,2)= cos(theta);
-        return T;
-}
-
-   
-inline Eigen::Matrix<double,3,3> Tdot_matrix(const Eigen::Matrix<double,3,1> &euler,
-                                            const Eigen::Matrix<double,3,1> &_omega_e)
-{	
-    // T_dot <<
-    //   0, -cos(alpha) * alpha_dot, -sin(alpha) * sin(beta) * alpha_dot + cos(alpha) * cos(beta) * beta_dot,
-    //   0, -sin(alpha) * alpha_dot, cos(alpha) * sin(beta) * alpha_dot + cos(beta) * sin(alpha) * beta_dot,
-    //   0, 0, -sin(beta) * beta_dot;
-
-
-    Eigen::Matrix<double,3,3> T = T_matrix(euler);
-    Eigen::Matrix<double,3,1> dphi_e = T.inverse()*_omega_e;
-
-    double phi_dot = dphi_e[0];
-    double theta_dot = dphi_e[1];
-    // double psi_dot = dphi_e[2];
-
-    double phi=euler(0,0);
-    double theta=euler(1,0);
-    Eigen::Matrix<double,3,3> T_dot;
-    
-    T_dot(0,0) = 0;
-    T_dot(0,1) = -cos(phi)*phi_dot;
-    T_dot(0,2) = -sin(phi) * sin(theta) * phi_dot + cos(phi) * cos(theta) * theta_dot;
-    T_dot(1,0) = 0;
-    T_dot(1,1) = -sin(phi) * phi_dot;
-    T_dot(1,2) = cos(phi) * sin(theta) * phi_dot + cos(theta) * sin(phi) * theta_dot;
-    T_dot(2,0)= 0;
-    T_dot(2,1)= 0;
-    T_dot(2,2)= -sin(theta) * theta_dot;
-        
-    return T_dot;
+double phi=euler(0,0);
+ double theta=euler(1,0);
+  Eigen::Matrix<double,3,3> T;
+ T(0,0) = 0;
+ T(0,1) = -sin(phi);
+ T(0,2) = cos(phi)*sin(theta);
+ T(1,0) = 0;
+ T(1,1) = cos(phi);
+ T(1,2) = sin(phi)*sin(theta);
+ T(2,0)= 1;
+ T(2,1)= 0;
+ T(2,2)= cos(theta);
+    return T;
 }
 
 inline  Eigen::Matrix<double,6,7> AnalitycalJacobian( const Eigen::Matrix<double,6,7> &J,const Eigen::Matrix<double,3,1> &euler){
 
- Eigen::Matrix<double,6,6> TA;
+ Eigen::Matrix<double,6,6> TA=Eigen::MatrixXd::Zero(6,6);
 TA.block(0,0,3,3) = Eigen::Matrix3d::Identity();
 TA.block(3,3,3,3) = T_matrix(euler);
  return TA.inverse()*J;
-}
-
-inline  Eigen::Matrix<double,6,7> AnalyticalJacobianDot( const Eigen::Matrix<double,6,7> &J,
-                                                         const Eigen::Matrix<double,6,7> &J_dot,
-                                                         const Eigen::Matrix<double,3,1> &euler,
-                                                         const Eigen::Matrix<double,3,1> &_omega_e) {
-    // JAdot = TA.inverse * (Jdot - TAdot*Ja)
-    Eigen::Matrix<double,6,6> TA;
-    TA.block(0,0,3,3) = Eigen::Matrix3d::Identity();
-    TA.block(3,3,3,3) = T_matrix(euler);
-
-    Eigen::Matrix<double,6,6> TA_dot;
-    // TA.block(0,0,3,3) = Eigen::Matrix3d::Zero();
-    TA_dot.block(3,3,3,3) = Tdot_matrix(euler,_omega_e);
-
-    Eigen::Matrix<double,6,7> JA = AnalitycalJacobian(J,euler);
-    
-    return TA.inverse() * (J_dot - TA_dot*JA);
-
 }
 
 
