@@ -50,7 +50,8 @@
 <h2>Inverse dynamics control (Point 4)</h2>
 
 <h3>Joint space</h3>
-Already implemented by the instructor and called via <code>tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc,Kp, Kdp);</code>
+Already implemented by the instructor and called via <code>tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc,Kp, Kdp);</code>.<br>
+Since it's in the joint space, kinematics inversion is needed for obtaining <code>qd</code>, <code>dqd</code> and <code>ddqd</code>, starting from <code>des_pose</code>, <code>des_vel</code> and <code>des_acc</code> respectively.
 
 <h3>Operational space</h3>
 Requested in Point 4 and called via <code>tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc,Kp, Kdp);</code> through the following equations:
