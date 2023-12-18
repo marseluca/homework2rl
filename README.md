@@ -59,4 +59,4 @@ Requested in Point 4 and called via <code>tau = controller_.idCntr(des_pose, des
 ![image](https://github.com/marseluca/homework2rl/assets/33966986/0ea3a39a-3860-47fc-9136-ae5d2b5ef932)
 
 <br>
-So the goal is to compute the position and velocity error and put it in the variables <code>x_tilde</code> and <code>dot_x_tilde</code>, altogether with the desired acceleration <code>dot_dot_x_d</code>.
+So the goal is to compute the position and velocity error and put it in the variables <code>x_tilde</code> and <code>dot_x_tilde</code>, altogether with the desired acceleration <code>dot_dot_x_d</code>, starting from <code>des_pose</code>, <code>des_vel</code> and <code>des_acc</code>.
