@@ -27,7 +27,7 @@
               <li>Compute the necessary matrices</li>
               <li>Compute the position, velocity and acceleration error between the current end-effector frame and the desired variables.
                 The desired variables <code>_desPos</code>, <code>_desVel</code> and <code>_desAcc</code> are obatined via the computation performed by the <code>KDLPlanner::compute_trajectory</code> function above. NOTE: these represnt the position in the _operational space_</li>
-                <li>Compute the algorithm based on the equation in the following image (<i>Point (4)</i>)</li>
+                <li>Compute the algorithm based on the equation in the image below (<i>Point (4)</i>)</li>
             </ol>
           </li>
           <li>The third one is an extra implementation (joint space inverse dynamics - optional)</li>
